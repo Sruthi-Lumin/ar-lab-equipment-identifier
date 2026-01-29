@@ -92,6 +92,7 @@
             min-height: 24px;
             display: flex;
             align-items: center;
+            gap: 8px;
         }
 
         .status-bar.status-info {
@@ -107,6 +108,21 @@
         .status-bar.status-error {
             background: #ffebee;
             color: #d32f2f;
+        }
+
+        .status-bar.status-loading::after {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(25, 118, 210, 0.3);
+            border-top-color: #1976d2;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
         .button-group {

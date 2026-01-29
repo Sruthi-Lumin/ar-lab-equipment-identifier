@@ -32,19 +32,31 @@ class CameraModule {
         throw new Error('WebRTC not supported in this browser');
       }
 
-      // Request camera access
-      this.stream = await navigator.mediaDevices.getUserMedia(this.constraints);
+      console.log('Requesting camera permissions...');
+      
+      // Request camera access with a timeout
+      const cameraPromise = navigator.mediaDevices.getUserMedia(this.constraints);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Camera permission request timeout')), 10000)
+      );
+      
+      this.stream = await Promise.race([cameraPromise, timeoutPromise]);
+      console.log('✓ Camera permission granted');
       
       // Attach stream to video element
       this.videoElement.srcObject = this.stream;
       
       // Play video
-      await new Promise(resolve => {
+      await new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => reject(new Error('Video playback timeout')), 5000);
         this.videoElement.onloadedmetadata = () => {
-          this.videoElement.play().then(resolve).catch(err => {
-            console.warn('Autoplay prevented:', err);
-            resolve();
-          });
+          clearTimeout(timeoutId);
+          this.videoElement.play()
+            .then(resolve)
+            .catch(err => {
+              console.warn('Autoplay prevented:', err);
+              resolve();
+            });
         };
       });
 
@@ -52,6 +64,16 @@ class CameraModule {
       return this.stream;
     } catch (error) {
       console.error('Camera initialization failed:', error);
+      
+      // Provide specific error messages
+      if (error.name === 'NotAllowedError' || error.message.includes('permission')) {
+        throw new Error('Camera permission denied. Please allow access and reload the page.');
+      } else if (error.name === 'NotFoundError') {
+        throw new Error('No camera device found. Please check your device.');
+      } else if (error.message.includes('timeout')) {
+        throw new Error('Camera request timed out. Please reload and try again.');
+      }
+      
       throw error;
     }
   }

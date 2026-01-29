@@ -38,15 +38,38 @@ class LabEquipmentIdentifierApp {
       // Setup UI elements
       this.setupUI();
 
-      // Initialize camera
+      // Quick init: Camera first (to get permissions immediately)
+      this.updateStatus('Requesting camera access...');
       this.camera = new CameraModule();
-      await this.camera.initialize(this.getElement('#videoInput'));
-      console.log('✓ Camera initialized');
+      
+      // Add timeout for camera initialization
+      const cameraTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Camera request timeout - please check permissions')), 15000)
+      );
+      
+      try {
+        await Promise.race([
+          this.camera.initialize(this.getElement('#videoInput')),
+          cameraTimeout
+        ]);
+        console.log('✓ Camera initialized');
+        this.updateStatus('Loading AI model... (may take 30-60 seconds)');
+      } catch (cameraError) {
+        console.error('Camera error:', cameraError);
+        this.updateStatus('Camera access denied or unavailable. Reload to try again.', 'error');
+        throw cameraError;
+      }
 
-      // Initialize object detection
+      // Initialize object detection (happens after camera is ready)
       this.detector = new ObjectDetectionModule();
-      await this.detector.loadModel();
-      console.log('✓ Object detection model loaded');
+      try {
+        await this.detector.loadModel();
+        console.log('✓ Object detection model loaded');
+      } catch (modelError) {
+        console.error('Model load error:', modelError);
+        this.updateStatus('Failed to load AI model. Please reload the page.', 'error');
+        throw modelError;
+      }
 
       // Initialize AR overlay
       this.arOverlay = new AROverlayModule(this.getElement('#arCanvas'));
@@ -450,7 +473,12 @@ class LabEquipmentIdentifierApp {
   updateStatus(message, type = 'info') {
     if (this.ui.statusBar) {
       this.ui.statusBar.textContent = message;
-      this.ui.statusBar.className = `status-${type}`;
+      this.ui.statusBar.className = `status-bar status-${type}`;
+      
+      // Add loading class for loading messages
+      if (message.toLowerCase().includes('loading') || message.toLowerCase().includes('requesting') || message.toLowerCase().includes('initializing')) {
+        this.ui.statusBar.classList.add('status-loading');
+      }
     }
     console.log(`[${type.toUpperCase()}] ${message}`);
   }
