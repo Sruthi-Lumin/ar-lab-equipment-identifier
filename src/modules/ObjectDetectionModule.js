@@ -17,15 +17,18 @@ class ObjectDetectionModule {
    */
   async loadModel() {
     try {
-      this.isLoading = true;
-      console.log('Loading TensorFlow.js model...');
-      this.model = await cocoSsd.load();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Model load timeout')), 30000)
+      );
+      
+      this.model = await Promise.race([
+        cocoSsd.load(),
+        timeoutPromise
+      ]);
       console.log('Model loaded successfully');
-      this.isLoading = false;
     } catch (error) {
-      console.error('Model loading failed:', error);
-      this.isLoading = false;
-      throw error;
+      console.error('Model load failed:', error);
+      throw new Error(`Failed to load model: ${error.message}`);
     }
   }
 

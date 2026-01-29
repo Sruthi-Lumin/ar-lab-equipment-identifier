@@ -74,6 +74,27 @@ class LabEquipmentIdentifierApp {
   }
 
   /**
+   * Initialize system components
+   */
+  async initializeSystem() {
+    try {
+      const statusEl = document.getElementById('status');
+      
+      statusEl.textContent = 'Loading AI model... (may take 30-60 seconds)';
+      await this.detector.loadModel();
+      
+      statusEl.textContent = 'Initializing camera...';
+      await this.camera.initialize();
+      
+      statusEl.textContent = 'Ready!';
+      document.getElementById('startBtn').disabled = false;
+    } catch (error) {
+      document.getElementById('status').textContent = `Error: ${error.message}. Reload page.`;
+      console.error(error);
+    }
+  }
+
+  /**
    * Setup UI elements
    */
   setupUI() {
